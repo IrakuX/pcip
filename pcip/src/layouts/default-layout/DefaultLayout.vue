@@ -36,7 +36,6 @@ import KTFooter from "@/layouts/default-layout/components/footer/Footer.vue";
 import KTToolbar from "@/layouts/default-layout/components//toolbar/Toolbar.vue";
 import KTScrollTop from "@/layouts/default-layout/components/extras/ScrollTop.vue";
 import KTActivityDrawer from "@/layouts/default-layout/components/drawers/ActivityDrawer.vue";
-import KTCreateApp from "@/components/modals/wizards/CreateAppModal.vue";
 import KTInviteFriendsModal from "@/components/modals/general/InviteFriendsModal.vue";
 import KTHelpDrawer from "@/layouts/default-layout/components/extras/HelpDrawer.vue";
 import KTToolButtons from "@/layouts/default-layout/components/extras/ToolButtons.vue";
@@ -62,7 +61,6 @@ export default defineComponent({
     KTFooter,
     KTToolbar,
     KTScrollTop,
-    KTCreateApp,
     KTInviteFriendsModal,
     KTActivityDrawer,
     KTHelpDrawer,
