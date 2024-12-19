@@ -237,20 +237,36 @@ namespace core.repositories
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spPerfilesListadoCmb"
-                    , new { filtro }
+                    , new { _filtro = filtro }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<IReadOnlyList<Perfil>>(resultadoCompleto);
-                return new ResponseModel<IReadOnlyList<Perfil>>()
+                if (resultadoCompleto != string.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<IReadOnlyList<Perfil>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<IReadOnlyList<Perfil>>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<IReadOnlyList<Perfil>>()
+                    {
+                        resultado = false,
+                        data = new List<Perfil>(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbPerfilesAsync(string filtro)", detalleUsuario = new { filtro } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbPerfilesAsync(string filtro)", detalleUsuario = new { _filtro = filtro } });
                 return new ResponseModel<IReadOnlyList<Perfil>>()
                 {
                     resultado = false,
@@ -264,7 +280,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbPerfilesAsync(string filtro)", detalleUsuario = new { filtro } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbPerfilesAsync(string filtro)", detalleUsuario = new { _filtro = filtro } });
                 return new ResponseModel<IReadOnlyList<Perfil>>()
                 {
                     resultado = false,
@@ -285,26 +301,41 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<IReadOnlyList<Perfil>>> GetAllAsync(string filtro, int pagina, int paginaTamanio)
+        public async Task<ResponseModel<IReadOnlyList<Perfil>>> GetAllAsync()
         {
             try
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spPerfilesListado"
-                    , new { filtro, pagina, paginaTamanio }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<IReadOnlyList<Perfil>>(resultadoCompleto);
-                return new ResponseModel<IReadOnlyList<Perfil>>()
+                if (resultadoCompleto != string.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<IReadOnlyList<Perfil>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<IReadOnlyList<Perfil>>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<IReadOnlyList<Perfil>>()
+                    {
+                        resultado = false,
+                        data = new List<Perfil>(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<Perfil>>()
                 {
                     resultado = false,
@@ -318,7 +349,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<Perfil>>()
                 {
                     resultado = false,
@@ -358,7 +389,7 @@ namespace core.repositories
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { perfilId = id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _perfilId = id } });
                 return new ResponseModel<Option<Perfil>>()
                 {
                     resultado = false,
@@ -372,7 +403,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { perfilId = id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _perfilId = id } });
                 return new ResponseModel<Option<Perfil>>()
                 {
                     resultado = false,

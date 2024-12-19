@@ -3,11 +3,11 @@
 using entities.entities;
 using entities.interfaces;
 using entities.models;
-using entities.models.Articulo;
-using entities.models.CategoriaArticulo;
+using entities.models.Almacen;
 
 using LanguageExt;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -18,13 +18,13 @@ using System.Text.Json;
 
 namespace core.repositories
 {
-    public class CategoriaArticuloRepository : ICategoriaArticuloRepository
+    public class AlmacenRepository : IAlmacenRepository
     {
         private readonly IConfiguration _config;
         private readonly IApplicationDbContext _dbContext;
         private readonly ILogger _logger;
 
-        public CategoriaArticuloRepository(ILogger<CategoriaArticuloRepository> logger, IConfiguration configuration, IApplicationDbContext dbContext)
+        public AlmacenRepository(ILogger<AlmacenRepository> logger, IConfiguration configuration, IApplicationDbContext dbContext)
         {
             _logger = logger;
             _config = configuration;
@@ -39,7 +39,7 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<CategoriaArticulo>> AddAsync(CategoriaArticulo entity)
+        public async Task<ResponseModel<Almacen>> AddAsync(Almacen entity)
         {
             using IDbConnection cn = db;
             cn.Open();
@@ -48,13 +48,13 @@ namespace core.repositories
             try
             {
                 var resultadoId = await GetMaxIdAsync().ConfigureAwait(false);
-                entity.categoriaArticuloId = (resultadoId == null ? 0 : resultadoId.Value) + 1;
+                entity.almacenId = (resultadoId == null ? 0 : resultadoId.Value) + 1;
 
-                await _dbContext.CategoriasArticulo.AddAsync(entity).ConfigureAwait(false);
+                await _dbContext.Almacenes.AddAsync(entity).ConfigureAwait(false);
                 await _dbContext.SaveChangesAsync(default).ConfigureAwait(false);
                 tran.Commit();
 
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
                     data = entity,
                     resultado = true
@@ -63,7 +63,7 @@ namespace core.repositories
             catch (MySqlException ex)
             {
                 tran.Rollback();
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
                     error = new ErrorModel()
                     {
@@ -77,12 +77,12 @@ namespace core.repositories
             catch (Exception ex)
             {
                 tran.Rollback();
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
                     error = new ErrorModel()
                     {
-                        error = ex,
                         errorCodigo = 000,
+                        error = ex,
                         errorMensaje = ex.Message
                     },
                     resultado = false
@@ -97,7 +97,63 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<CategoriaArticulo>> DeleteAsync(CategoriaArticulo entity)
+        public async Task<ResponseModel<IReadOnlyList<AlmacenViewModel>>> AlmacenDetalleAsync(int id)
+        {
+            try
+            {
+                db.Open();
+                var result = await db.QueryAsync<string>("spAlmacenesListadoDetalle"
+                    , new { almacenId = id }
+                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
+
+                string resultadoCompleto = string.Concat(result);
+                var resultado = JsonSerializer.Deserialize<IReadOnlyList<AlmacenViewModel>>(resultadoCompleto);
+                return new ResponseModel<IReadOnlyList<AlmacenViewModel>>()
+                {
+                    resultado = true,
+                    data = resultado
+                };
+            }
+            catch (MySqlException ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "AlmacenDetalleAsync(int id)", detalleUsuario = new { almacenId = id } });
+                return new ResponseModel<IReadOnlyList<AlmacenViewModel>>()
+                {
+                    resultado = false,
+                    data = null,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorMensaje = ex.Message,
+                        errorCodigo = (int)ex.ErrorCode,
+                    },
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "AlmacenDetalleAsync(int id)", detalleUsuario = new { almacenId = id } });
+                return new ResponseModel<IReadOnlyList<AlmacenViewModel>>()
+                {
+                    resultado = false,
+                    data = null,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorCodigo = 000,
+                        errorMensaje = ex.Message
+                    }
+                };
+            }
+            finally
+            {
+                this.db.Close();
+                this.db.Dispose();
+                MySqlConnection.ClearPool((MySqlConnection)db);
+                this.Dispose();
+            }
+        }
+
+        public async Task<ResponseModel<Almacen>> DeleteAsync(Almacen entity)
         {
             using IDbConnection cn = db;
             cn.Open();
@@ -105,11 +161,11 @@ namespace core.repositories
 
             try
             {
-                _dbContext.CategoriasArticulo.Remove(entity);
+                _dbContext.Almacenes.Remove(entity);
                 await _dbContext.SaveChangesAsync(default).ConfigureAwait(false);
                 tran.Commit();
 
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
                     resultado = true,
                     data = entity
@@ -118,29 +174,43 @@ namespace core.repositories
             catch (MySqlException ex)
             {
                 tran.Rollback();
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
+                    resultado = false,
                     error = new ErrorModel()
                     {
                         error = ex,
                         errorMensaje = ex.Message,
                         errorCodigo = (int)ex.ErrorCode,
                     },
-                    resultado = false
+                };
+            }
+            catch (DbUpdateException ex)
+            {
+                tran.Rollback();
+                return new ResponseModel<Almacen>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        errorCodigo = ex?.Message == "Reference constraint violation" ? 101 : 000,
+                        error = ex?.Message == "Reference constraint violation" ? ex?.InnerException : ex,
+                        errorMensaje = ex?.Message == "Reference constraint violation" ? ex?.InnerException?.Message : ex?.Message
+                    },
                 };
             }
             catch (Exception ex)
             {
                 tran.Rollback();
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
+                    resultado = false,
                     error = new ErrorModel()
                     {
                         errorCodigo = 000,
                         error = ex,
                         errorMensaje = ex.Message
                     },
-                    resultado = false
                 };
             }
             finally
@@ -152,7 +222,7 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<CategoriaArticulo>> DeleteAsync(int id)
+        public async Task<ResponseModel<Almacen>> DeleteAsync(int id)
         {
             using IDbConnection cn = db;
             cn.Open();
@@ -160,40 +230,40 @@ namespace core.repositories
 
             try
             {
-                var registro = await GetByIdAsync(id).ConfigureAwait(false);
-                if (registro.data == Option<CategoriaArticulo>.None)
+                var almacen = await GetByIdAsync(id);
+                if (almacen.data == Option<Almacen>.None)
                 {
                     throw new ArgumentException("Registro de objeto invalido.");
                 }
 
-                _dbContext.CategoriasArticulo.Remove((CategoriaArticulo)registro.data);
-                await _dbContext.SaveChangesAsync(default).ConfigureAwait(false);
+                _dbContext.Almacenes.Remove((Almacen)almacen.data);
+                await _dbContext.SaveChangesAsync(default);
                 tran.Commit();
 
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
                     resultado = true,
-                    data = (CategoriaArticulo)registro.data
+                    data = (Almacen)almacen.data
                 };
             }
             catch (MySqlException ex)
             {
                 tran.Rollback();
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
+                    resultado = false,
                     error = new ErrorModel()
                     {
                         error = ex,
                         errorMensaje = ex.Message,
                         errorCodigo = (int)ex.ErrorCode,
                     },
-                    resultado = false
                 };
             }
             catch (Exception ex)
             {
                 tran.Rollback();
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
                     error = new ErrorModel()
                     {
@@ -218,46 +288,40 @@ namespace core.repositories
             GC.SuppressFinalize(this);
         }
 
-        public async Task<ResponseModel<IReadOnlyList<CategoriaArticuloCmbViewModel>>> dsCmbCategoriasArticuloAsync(string filtro)
+        public async Task<ResponseModel<IReadOnlyList<AlmacenViewModel>>> dsCmbAlmacenesAsync(bool almacenActivo)
         {
             try
             {
                 db.Open();
-                var result = await db.QueryAsync<string>("spCategoriasArticuloListadoCmb"
-                    , new { filtro }
+                var result = await db.QueryAsync<string>("spAlmacenesListadoCmb"
+                    , new { _almacenActivo = almacenActivo }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                if (resultadoCompleto != String.Empty)
+                if (resultadoCompleto != string.Empty)
                 {
-                    return new ResponseModel<IReadOnlyList<CategoriaArticuloCmbViewModel>>()
+                    var resultado = JsonSerializer.Deserialize<IReadOnlyList<AlmacenViewModel>>(resultadoCompleto);
+                    return new ResponseModel<IReadOnlyList<AlmacenViewModel>>()
                     {
                         resultado = true,
-                        data = JsonSerializer.Deserialize<IReadOnlyList<CategoriaArticuloCmbViewModel>>(resultadoCompleto)
+                        data = resultado
                     };
                 }
                 else
                 {
-                    return new ResponseModel<IReadOnlyList<CategoriaArticuloCmbViewModel>>()
+                    return new ResponseModel<IReadOnlyList<AlmacenViewModel>>()
                     {
-                        resultado = false,
-                        data = new List<CategoriaArticuloCmbViewModel>(),
-                        error = new ErrorModel()
-                        {
-                            error = null,
-                            errorCodigo = 100,
-                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
-                        }
+                        resultado = true,
+                        data = new List<AlmacenViewModel>()
                     };
                 }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbCategoriasArticuloAsync(string filtro)", detalleUsuario = new { filtro } });
-                return new ResponseModel<IReadOnlyList<CategoriaArticuloCmbViewModel>>()
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbAlmacenesAsync(bool almacenActivo)", detalleUsuario = new { _almacenActivo = almacenActivo } });
+                return new ResponseModel<IReadOnlyList<AlmacenViewModel>>()
                 {
                     resultado = false,
-                    data = new List<CategoriaArticuloCmbViewModel>(),
                     error = new ErrorModel()
                     {
                         error = ex,
@@ -268,82 +332,10 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbCategoriasArticuloAsync(string filtro)", detalleUsuario = new { filtro } });
-                return new ResponseModel<IReadOnlyList<CategoriaArticuloCmbViewModel>>()
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbAlmacenesAsync(bool almacenActivo)", detalleUsuario = new { _almacenActivo = almacenActivo } });
+                return new ResponseModel<IReadOnlyList<AlmacenViewModel>>()
                 {
                     resultado = false,
-                    data = new List<CategoriaArticuloCmbViewModel>(),
-                    error = new ErrorModel()
-                    {
-                        error = ex,
-                        errorCodigo = 200,
-                        errorMensaje = ex.Message
-                    }
-                };
-            }
-            finally
-            {
-                this.db.Close();
-                this.db.Dispose();
-                MySqlConnection.ClearPool((MySqlConnection)db);
-                this.Dispose();
-            }
-        }
-
-        public async Task<ResponseModel<IReadOnlyList<CategoriaArticulo>>> GetAllAsync()
-        {
-            try
-            {
-                db.Open();
-                var result = await db.QueryAsync<string>("spCategoriaArticuloListado"
-                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
-
-                string resultadoCompleto = string.Concat(result);
-                if (resultadoCompleto != String.Empty)
-                {
-                    return new ResponseModel<IReadOnlyList<CategoriaArticulo>>()
-                    {
-                        resultado = true,
-                        data = JsonSerializer.Deserialize<IReadOnlyList<CategoriaArticulo>>(resultadoCompleto)
-                    };
-                }
-                else
-                {
-                    return new ResponseModel<IReadOnlyList<CategoriaArticulo>>()
-                    {
-                        resultado = false,
-                        data = new List<CategoriaArticulo>(),
-                        error = new ErrorModel()
-                        {
-                            error = null,
-                            errorCodigo = 100,
-                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
-                        }
-                    };
-                }
-            }
-            catch (MySqlException ex)
-            {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
-                return new ResponseModel<IReadOnlyList<CategoriaArticulo>>()
-                {
-                    resultado = false,
-                    data = new List<CategoriaArticulo>(),
-                    error = new ErrorModel()
-                    {
-                        error = ex,
-                        errorMensaje = ex.Message,
-                        errorCodigo = (int)ex.ErrorCode,
-                    },
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
-                return new ResponseModel<IReadOnlyList<CategoriaArticulo>>()
-                {
-                    resultado = false,
-                    data = new List<CategoriaArticulo>(),
                     error = new ErrorModel()
                     {
                         error = ex,
@@ -361,30 +353,39 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<Option<CategoriaArticulo>>> GetByIdAsync(int id)
+        public async Task<ResponseModel<IReadOnlyList<Almacen>>> GetAllAsync()
         {
             try
             {
                 db.Open();
-                var result = await db.QueryAsync<string>("spCategoriasArticuloListadoPorId"
-                    , new { _categoriaArticuloId = id }
+                var result = await db.QueryAsync<string>("spAlmacenesListado"
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<CategoriaArticulo>(resultadoCompleto);
-                return new ResponseModel<Option<CategoriaArticulo>>()
+                if (resultadoCompleto != string.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    var resultado = JsonSerializer.Deserialize<IReadOnlyList<Almacen>>(resultadoCompleto);
+                    return new ResponseModel<IReadOnlyList<Almacen>>()
+                    {
+                        resultado = true,
+                        data = resultado
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<IReadOnlyList<Almacen>>()
+                    {
+                        resultado = true,
+                        data = new List<Almacen>()
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int categoriaArticuloId)", detalleUsuario = new { id } });
-                return new ResponseModel<Option<CategoriaArticulo>>()
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
+                return new ResponseModel<IReadOnlyList<Almacen>>()
                 {
                     resultado = false,
-                    data = new Option<CategoriaArticulo>(),
                     error = new ErrorModel()
                     {
                         error = ex,
@@ -395,11 +396,64 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int categoriaArticuloId)", detalleUsuario = new { id } });
-                return new ResponseModel<Option<CategoriaArticulo>>()
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
+                return new ResponseModel<IReadOnlyList<Almacen>>()
                 {
                     resultado = false,
-                    data = new Option<CategoriaArticulo>(),
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorCodigo = 000,
+                        errorMensaje = ex.Message
+                    }
+                };
+            }
+            finally
+            {
+                this.db.Close();
+                this.db.Dispose();
+                MySqlConnection.ClearPool((MySqlConnection)db);
+                this.Dispose();
+            }
+        }
+
+        public async Task<ResponseModel<Option<Almacen>>> GetByIdAsync(int id)
+        {
+            try
+            {
+                db.Open();
+                var result = await db.QueryAsync<string>("spAlmacenesListadoPorId"
+                    , new { _almacenId = id }
+                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
+
+                string resultadoCompleto = string.Concat(result);
+                var resultado = JsonSerializer.Deserialize<Almacen>(resultadoCompleto);
+                return new ResponseModel<Option<Almacen>>()
+                {
+                    resultado = true,
+                    data = resultado
+                };
+            }
+            catch (MySqlException ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _almacenId = id } });
+                return new ResponseModel<Option<Almacen>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorMensaje = ex.Message,
+                        errorCodigo = (int)ex.ErrorCode,
+                    },
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _almacenId = id } });
+                return new ResponseModel<Option<Almacen>>()
+                {
+                    resultado = false,
                     error = new ErrorModel()
                     {
                         error = ex,
@@ -422,7 +476,7 @@ namespace core.repositories
             try
             {
                 db.Open();
-                string sql = @"SELECT IFNULL(MAX(categoriaArticuloId), NULL) AS max_categoriaArticuloId FROM categoriasArticulo";
+                string sql = @"SELECT IFNULL(MAX(almacenId), NULL) AS maxAlmacenId FROM almacenes";
                 return await db.QuerySingleOrDefaultAsync<int?>(sql).ConfigureAwait(false);
             }
             catch (MySqlException ex)
@@ -444,18 +498,19 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<CategoriaArticulo>> UpdateAsync(CategoriaArticulo entity)
+        public async Task<ResponseModel<Almacen>> UpdateAsync(Almacen entity)
         {
             using IDbConnection cn = db;
             cn.Open();
             using var tran = cn.BeginTransaction();
+
             try
             {
-                _dbContext.CategoriasArticulo.Update(entity);
+                _dbContext.Almacenes.Update(entity);
                 await _dbContext.SaveChangesAsync(default).ConfigureAwait(false);
                 tran.Commit();
 
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
                     data = entity,
                     resultado = true
@@ -464,21 +519,21 @@ namespace core.repositories
             catch (MySqlException ex)
             {
                 tran.Rollback();
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
+                    resultado = false,
                     error = new ErrorModel()
                     {
                         error = ex,
                         errorMensaje = ex.Message,
                         errorCodigo = (int)ex.ErrorCode,
                     },
-                    resultado = false
                 };
             }
             catch (Exception ex)
             {
                 tran.Rollback();
-                return new ResponseModel<CategoriaArticulo>()
+                return new ResponseModel<Almacen>()
                 {
                     error = new ErrorModel()
                     {

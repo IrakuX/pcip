@@ -7,6 +7,7 @@ namespace core.services
         public WorkRepository(
             IAccesoRepository accesoRepository
             , IArticuloRepository articuloRepository
+            , IAlmacenRepository almacenRepository
             , ICategoriaArticuloRepository categoriaArticuloRepository
             , IEmpleadoRepository empleadoRepository
             , IEnvioCorreoRepository envioCorreoRepository
@@ -19,6 +20,7 @@ namespace core.services
             , IUsuarioTokenRepository usuarioTokenRepository)
         {
             Acceso = accesoRepository;
+            Almacen = almacenRepository;
             Articulo = articuloRepository;
             CategoriaArticulo = categoriaArticuloRepository;
             Empleado = empleadoRepository;
@@ -33,6 +35,7 @@ namespace core.services
         }
 
         public IAccesoRepository Acceso { get; }
+        public IAlmacenRepository Almacen { get; }
         public IArticuloRepository Articulo { get; }
         public ICategoriaArticuloRepository CategoriaArticulo { get; }
         public IEmpleadoRepository Empleado { get; }

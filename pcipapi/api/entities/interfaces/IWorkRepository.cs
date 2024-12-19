@@ -3,6 +3,7 @@
     public interface IWorkRepository
     {
         IAccesoRepository Acceso { get; }
+        IAlmacenRepository Almacen { get; }
         IArticuloRepository Articulo { get; }
         ICategoriaArticuloRepository CategoriaArticulo { get; }
         IEmpleadoRepository Empleado { get; }

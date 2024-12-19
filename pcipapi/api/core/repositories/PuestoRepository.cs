@@ -302,17 +302,16 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<IReadOnlyList<Puesto>>> GetAllAsync(string filtro, int pagina, int paginaTamanio)
+        public async Task<ResponseModel<IReadOnlyList<Puesto>>> GetAllAsync()
         {
             try
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spPuestosListado"
-                    , new { filtro, pagina, paginaTamanio }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                if (resultadoCompleto != String.Empty)
+                if (resultadoCompleto != string.Empty)
                 {
                     return new ResponseModel<IReadOnlyList<Puesto>>()
                     {
@@ -337,7 +336,7 @@ namespace core.repositories
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<Puesto>>()
                 {
                     resultado = false,
@@ -351,7 +350,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<Puesto>>()
                 {
                     resultado = false,
@@ -378,7 +377,7 @@ namespace core.repositories
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spPuestosListadoPorId"
-                    , new { puestoId = id }
+                    , new { _puestoId = id }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
@@ -407,7 +406,7 @@ namespace core.repositories
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int puestoId)", detalleUsuario = new { puestoId = id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _puestoId = id } });
                 return new ResponseModel<Option<Puesto>>()
                 {
                     resultado = false,
@@ -421,7 +420,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int puestoId)", detalleUsuario = new { puestoId = id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _puestoId = id } });
                 return new ResponseModel<Option<Puesto>>()
                 {
                     resultado = false,

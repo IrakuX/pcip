@@ -1,10 +1,33 @@
-﻿using System.Security.Cryptography;
+﻿using entities.models.Usuario;
+
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace core.utils
 {
     public static class CUtilidades
     {
+        public static UsuarioSesionViewModel ObtenerUsuario(System.Security.Principal.IIdentity identity)
+        {
+            UsuarioSesionViewModel usuarioSesion = null;
+            if (identity.IsAuthenticated)
+            {
+                var claimsIdentity = identity as ClaimsIdentity;
+                if (claimsIdentity != null)
+                {
+                    IEnumerable<Claim> claims = claimsIdentity.Claims;
+                    usuarioSesion = new UsuarioSesionViewModel()
+                    {
+                        usuarioId = int.Parse(claimsIdentity.FindFirst("usuarioId").Value),
+                        perfilId = int.Parse(claimsIdentity.FindFirst("perfilId").Value),
+                        perfilNombre = claimsIdentity.FindFirst("perfilNombre").Value,
+                    };
+                }
+            }
+            return usuarioSesion;
+        }
+
         public static void ContrasenaCrear(string contrasena, out byte[] usuarioContrasena)
         {
             using (SHA512 sha512Hash = SHA512.Create())

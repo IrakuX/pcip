@@ -223,7 +223,7 @@ namespace core.repositories
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spUnidadesMedidaListadoCmb"
-                    , new { filtro }
+                    , new { _filtro = filtro }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
@@ -252,7 +252,7 @@ namespace core.repositories
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbUnidadesMedidaAsync(string filtro)", detalleUsuario = new { filtro } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbUnidadesMedidaAsync(string filtro)", detalleUsuario = new { _filtro = filtro } });
                 return new ResponseModel<IReadOnlyList<UnidadMedidaCmbViewModel>>()
                 {
                     resultado = false,
@@ -287,26 +287,41 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<IReadOnlyList<UnidadMedida>>> GetAllAsync(string filtro, int pagina, int paginaTamanio)
+        public async Task<ResponseModel<IReadOnlyList<UnidadMedida>>> GetAllAsync()
         {
             try
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spUnidadesMedidaListado"
-                    , new { filtro, pagina, paginaTamanio }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<IReadOnlyList<UnidadMedida>>(resultadoCompleto);
-                return new ResponseModel<IReadOnlyList<UnidadMedida>>()
+                if (resultadoCompleto != string.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<IReadOnlyList<UnidadMedida>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<IReadOnlyList<UnidadMedida>>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<IReadOnlyList<UnidadMedida>>()
+                    {
+                        resultado = false,
+                        data = new List<UnidadMedida>(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<UnidadMedida>>()
                 {
                     resultado = false,
@@ -320,7 +335,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<UnidadMedida>>()
                 {
                     resultado = false,
@@ -347,20 +362,36 @@ namespace core.repositories
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spUnidadesMedidaPorId"
-                    , new { unidadMedidaId = id }
+                    , new { _unidadMedidaId = id }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<UnidadMedida>(resultadoCompleto);
-                return new ResponseModel<Option<UnidadMedida>>()
+                if (resultadoCompleto != String.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<Option<UnidadMedida>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<UnidadMedida>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<Option<UnidadMedida>>()
+                    {
+                        resultado = false,
+                        data = new UnidadMedida(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int unidadMedidaId)", detalleUsuario = new { id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _unidadMedidaId = id } });
                 return new ResponseModel<Option<UnidadMedida>>()
                 {
                     resultado = false,
@@ -374,7 +405,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int unidadMedidaId)", detalleUsuario = new { id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _unidadMedidaId = id } });
                 return new ResponseModel<Option<UnidadMedida>>()
                 {
                     resultado = false,

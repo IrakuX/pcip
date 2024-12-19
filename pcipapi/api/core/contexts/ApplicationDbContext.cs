@@ -19,6 +19,7 @@ namespace core.contexts
         }
 
         public virtual DbSet<Acceso> Accesos { get; set; }
+        public virtual DbSet<Almacen> Almacenes { get; set; }
         public virtual DbSet<Articulo> Articulos { get; set; }
         public virtual DbSet<CategoriaArticulo> CategoriasArticulo { get; set; }
         public IDbConnection Connection => Database.GetDbConnection();
@@ -35,6 +36,7 @@ namespace core.contexts
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.ApplyConfiguration(new AccesoMap());
+            modelBuilder.ApplyConfiguration(new AlmacenMap());
             modelBuilder.ApplyConfiguration(new ArticuloMap());
             modelBuilder.ApplyConfiguration(new CategoriaArticuloMap());
             modelBuilder.ApplyConfiguration(new EmpleadoMap());

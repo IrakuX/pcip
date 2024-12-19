@@ -11,7 +11,5 @@ namespace entities.interfaces
         IDisposable
     {
         Task<ResponseModel<IReadOnlyList<EmpleadoCmbViewModel>>> dsCmbEmpleadosAsync(string filtro);
-
-        Task<ResponseModel<IReadOnlyList<EmpleadoCmbViewModel>>> dsCmbEmpleadosEncargadoAlmacenAsync(string filtro);
     }
 }

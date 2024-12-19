@@ -12,6 +12,6 @@ namespace entities.interfaces
     {
         Task<ResponseModel<ArticuloDetalleViewModel>> ArticuloDetalleAsync(int id);
 
-        Task<ResponseModel<IReadOnlyList<ArticuloCmbViewModel>>> dsCmbArticulosAsync(int categoriaArticuloId, bool articuloHerramienta, bool articuloCompuesto, string filtro);
+        Task<ResponseModel<IReadOnlyList<ArticuloCmbViewModel>>> dsCmbArticulosAsync(int categoriaArticuloId, string filtro);
     }
 }

@@ -284,80 +284,41 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<IReadOnlyList<EmpleadoCmbViewModel>>> dsCmbEmpleadosEncargadoAlmacenAsync(string filtro)
-        {
-            try
-            {
-                db.Open();
-                var result = await db.QueryAsync<string>("spEmpleadosListadoEncargadoAlmacenesCmb"
-                    , new { filtro }
-                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
-
-                string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<IReadOnlyList<EmpleadoCmbViewModel>>(resultadoCompleto);
-                return new ResponseModel<IReadOnlyList<EmpleadoCmbViewModel>>()
-                {
-                    resultado = true,
-                    data = resultado
-                };
-            }
-            catch (MySqlException ex)
-            {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbEmpleadosEncargadoAlmacenAsync(string filtro)", detalleUsuario = new { filtro } });
-                return new ResponseModel<IReadOnlyList<EmpleadoCmbViewModel>>()
-                {
-                    resultado = false,
-                    error = new ErrorModel()
-                    {
-                        error = ex,
-                        errorMensaje = ex.Message,
-                        errorCodigo = (int)ex.ErrorCode,
-                    },
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbEmpleadosEncargadoAlmacenAsync(string filtro)", detalleUsuario = new { filtro } });
-                return new ResponseModel<IReadOnlyList<EmpleadoCmbViewModel>>()
-                {
-                    resultado = false,
-                    error = new ErrorModel()
-                    {
-                        error = ex,
-                        errorCodigo = 000,
-                        errorMensaje = ex.Message
-                    },
-                };
-            }
-            finally
-            {
-                this.db.Close();
-                this.db.Dispose();
-                MySqlConnection.ClearPool((MySqlConnection)db);
-                this.Dispose();
-            }
-        }
-
-        public async Task<ResponseModel<IReadOnlyList<Empleado>>> GetAllAsync(string filtro, int pagina, int paginaTamanio)
+        public async Task<ResponseModel<IReadOnlyList<Empleado>>> GetAllAsync()
         {
             try
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spEmpleadosListado"
-                    , new { filtro, pagina, paginaTamanio }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<IReadOnlyList<Empleado>>(resultadoCompleto);
-                return new ResponseModel<IReadOnlyList<Empleado>>()
+                if (resultadoCompleto != String.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<IReadOnlyList<Empleado>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<IReadOnlyList<Empleado>>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<IReadOnlyList<Empleado>>()
+                    {
+                        resultado = false,
+                        data = new List<Empleado>(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<Empleado>>()
                 {
                     resultado = false,
@@ -367,12 +328,11 @@ namespace core.repositories
                         errorMensaje = ex.Message,
                         errorCodigo = (int)ex.ErrorCode,
                     },
-                    data = new List<Empleado>(),
                 };
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<Empleado>>()
                 {
                     resultado = false,
@@ -382,7 +342,6 @@ namespace core.repositories
                         errorCodigo = 000,
                         errorMensaje = ex.Message
                     },
-                    data = new List<Empleado>(),
                 };
             }
             finally
@@ -399,21 +358,37 @@ namespace core.repositories
             try
             {
                 db.Open();
-                var result = await db.QueryAsync<string>("spEmpleadosPorId"
-                    , new { empleadoId = id }
+                var result = await db.QueryAsync<string>("spEmpleadosListadoPorId"
+                    , new { _empleadoId = id }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<Empleado>(resultadoCompleto);
-                return new ResponseModel<Option<Empleado>>()
+                if (resultadoCompleto != String.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<Option<Empleado>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<Empleado>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<Option<Empleado>>()
+                    {
+                        resultado = false,
+                        data = new Empleado(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int empleadoId)", detalleUsuario = new { id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int empleadoId)", detalleUsuario = new { _empleadoId = id } });
                 return new ResponseModel<Option<Empleado>>()
                 {
                     resultado = false,
@@ -427,7 +402,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int empleadoId)", detalleUsuario = new { id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int empleadoId)", detalleUsuario = new { _empleadoId = id } });
                 return new ResponseModel<Option<Empleado>>()
                 {
                     resultado = false,

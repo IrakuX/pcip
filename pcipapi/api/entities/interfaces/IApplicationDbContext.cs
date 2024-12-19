@@ -10,6 +10,7 @@ namespace entities.interfaces
     public interface IApplicationDbContext : IDisposable
     {
         public DbSet<Acceso> Accesos { get; set; }
+        public DbSet<Almacen> Almacenes { get; set; }
         public DbSet<Articulo> Articulos { get; set; }
         public DbSet<CategoriaArticulo> CategoriasArticulo { get; set; }
         public IDbConnection Connection { get; }

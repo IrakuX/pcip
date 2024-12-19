@@ -3,6 +3,7 @@
 using entities.entities;
 using entities.interfaces;
 using entities.models;
+using entities.models.Almacen;
 using entities.models.Articulo;
 
 using LanguageExt;
@@ -300,13 +301,13 @@ namespace core.repositories
             GC.SuppressFinalize(this);
         }
 
-        public async Task<ResponseModel<IReadOnlyList<ArticuloCmbViewModel>>> dsCmbArticulosAsync(int categoriaArticuloId, bool articuloHerramienta, bool articuloCompuesto, string filtro)
+        public async Task<ResponseModel<IReadOnlyList<ArticuloCmbViewModel>>> dsCmbArticulosAsync(int categoriaArticuloId, string filtro)
         {
             try
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spArticulosListadoPorCategoria"
-                    , new { categoriaArticuloId, articuloHerramienta, filtro }
+                    , new { _categoriaArticuloId = categoriaArticuloId, _filtro = filtro }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
@@ -335,7 +336,7 @@ namespace core.repositories
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbArticulosAsync(int categoriaArticuloId, bool articuloHerramienta, string filtro)", detalleUsuario = new { categoriaArticuloId, articuloHerramienta, filtro } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbArticulosAsync(int categoriaArticuloId, string filtro)", detalleUsuario = new { _categoriaArticuloId = categoriaArticuloId, _filtro = filtro } });
                 return new ResponseModel<IReadOnlyList<ArticuloCmbViewModel>>()
                 {
                     resultado = false,
@@ -350,7 +351,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbArticulosAsync(int categoriaArticuloId, bool articuloHerramienta, string filtro)", detalleUsuario = new { categoriaArticuloId, articuloHerramienta, filtro } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbArticulosAsync(int categoriaArticuloId, string filtro)", detalleUsuario = new { _categoriaArticuloId = categoriaArticuloId, _filtro = filtro } });
                 return new ResponseModel<IReadOnlyList<ArticuloCmbViewModel>>()
                 {
                     resultado = false,
@@ -372,30 +373,38 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<IReadOnlyList<Articulo>>> GetAllAsync(string filtro, int pagina, int paginaTamanio)
+        public async Task<ResponseModel<IReadOnlyList<Articulo>>> GetAllAsync()
         {
             try
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spArticulosListado"
-                    , new { filtro, pagina, paginaTamanio }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<IReadOnlyList<Articulo>>(resultadoCompleto);
-                return new ResponseModel<IReadOnlyList<Articulo>>()
+                if (resultadoCompleto != string.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<IReadOnlyList<Articulo>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<IReadOnlyList<Articulo>>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<IReadOnlyList<Articulo>>()
+                    {
+                        resultado = true,
+                        data = new List<Articulo>()
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<Articulo>>()
                 {
                     resultado = false,
-                    data = new List<Articulo>(),
                     error = new ErrorModel()
                     {
                         error = ex,
@@ -406,11 +415,10 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync(string filtro, int pagina, int paginaTamanio)", detalleUsuario = new { filtro, pagina, paginaTamanio } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
                 return new ResponseModel<IReadOnlyList<Articulo>>()
                 {
                     resultado = false,
-                    data = new List<Articulo>(),
                     error = new ErrorModel()
                     {
                         error = ex,
@@ -434,24 +442,33 @@ namespace core.repositories
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spArticulosListadoPorId"
-                    , new { articuloId = id }
+                    , new { _articuloId = id }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<Articulo>(resultadoCompleto);
-                return new ResponseModel<Option<Articulo>>()
+                if (resultadoCompleto != string.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<Option<Articulo>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<Articulo>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<Option<Articulo>>()
+                    {
+                        resultado = true,
+                        data = new Articulo()
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int articuloId)", detalleUsuario = new { id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _articuloId = id } });
                 return new ResponseModel<Option<Articulo>>()
                 {
                     resultado = false,
-                    data = new Option<Articulo>(),
                     error = new ErrorModel()
                     {
                         error = ex,
@@ -462,11 +479,10 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int articuloId)", detalleUsuario = new { id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _articuloId = id } });
                 return new ResponseModel<Option<Articulo>>()
                 {
                     resultado = false,
-                    data = new Option<Articulo>(),
                     error = new ErrorModel()
                     {
                         error = ex,
