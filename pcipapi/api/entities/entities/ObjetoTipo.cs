@@ -1,5 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using entities.models;
+
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace entities.entities
 {
@@ -8,6 +11,7 @@ namespace entities.entities
     {
         [Display(Name = "Activo")]
         [Column("objetoTipoActivo")]
+        [JsonConverter(typeof(IntToBoolConverter))]
         public bool objetoTipoActivo { get; set; } = false;
 
         [Key]

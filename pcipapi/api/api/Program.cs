@@ -4,10 +4,16 @@ using core.services;
 using entities.interfaces;
 using entities.models;
 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -97,16 +103,72 @@ builder.Services.AddInfrastructure();
 
 builder
     .Services
+    .AddTransient<IDbConnectionFactory>(provider => provider.GetService<MySqlConnectionFactory>())
     .AddTransient<IApplicationDbContext>(provider => provider.GetService<ApplicationDbContext>())
     .AddTransient<IIdentityService, IdentityService>()
     .AddTransient<IUserService, UserService>();
 
 #endregion services
 
+builder
+    .Services
+    .AddAuthorization(options =>
+    {
+        options.AddPolicy("bearer", new AuthorizationPolicyBuilder().AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build());
+    })
+    .AddAuthentication(option =>
+    {
+        option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        option.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        option.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.Audience = config.GetSection("Jwt:Audience").Value;
+        options.ClaimsIssuer = config.GetSection("Jwt:Issuer").Value;
+        options.RequireHttpsMetadata = true;
+        options.SaveToken = true;
+        options.TokenValidationParameters = tokenValidationParameters;
+        options.Events = new JwtBearerEvents()
+        {
+            OnTokenValidated = context =>
+            {
+                var accessToken = context.SecurityToken as JwtSecurityToken;
+                if (accessToken != null)
+                {
+                    ClaimsIdentity identity = context.Principal.Identity as ClaimsIdentity;
+                    if (identity != null)
+                    {
+                        identity.AddClaim(new Claim("access_token", accessToken.RawData));
+                    }
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+var culture = CultureInfo.CreateSpecificCulture("es-MX");
+var dateformat = new DateTimeFormatInfo
+{
+    ShortDatePattern = "dd/MM/yyyy",
+    LongDatePattern = "dd/MM/yyyy hh:mm:ss tt"
+};
+culture.DateTimeFormat = dateformat;
+
+var supportedCultures = new[] { culture };
+
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture(culture),
+    SupportedCultures = supportedCultures,
+    SupportedUICultures = supportedCultures
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -117,6 +179,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

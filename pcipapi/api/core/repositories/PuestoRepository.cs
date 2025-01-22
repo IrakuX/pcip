@@ -174,7 +174,7 @@ namespace core.repositories
 
             try
             {
-                var Puesto = await GetByIdAsync(id);
+                var Puesto = await GetPuestoByIdAsync(id);
                 if (Puesto.data == Option<Puesto>.None)
                 {
                     throw new ArgumentException("Registro de objeto invalido.");
@@ -232,7 +232,7 @@ namespace core.repositories
             GC.SuppressFinalize(this);
         }
 
-        public async Task<ResponseModel<IReadOnlyList<PuestoViewModel>>> dsCmbPuestosAsync(string filtro)
+        public async Task<ResponseModel<IReadOnlyList<PuestoCmbViewModel>>> dsCmbPuestosAsync(string filtro)
         {
             try
             {
@@ -243,6 +243,75 @@ namespace core.repositories
 
                 string resultadoCompleto = string.Concat(result);
                 if (resultadoCompleto != String.Empty)
+                {
+                    return new ResponseModel<IReadOnlyList<PuestoCmbViewModel>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<IReadOnlyList<PuestoCmbViewModel>>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<IReadOnlyList<PuestoCmbViewModel>>()
+                    {
+                        resultado = false,
+                        data = new List<PuestoCmbViewModel>(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
+            }
+            catch (MySqlException ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbPuestosAsync(string filtro)", detalleUsuario = new { filtro } });
+                return new ResponseModel<IReadOnlyList<PuestoCmbViewModel>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorMensaje = ex.Message,
+                        errorCodigo = (int)ex.ErrorCode,
+                    },
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbPuestosAsync(string filtro)", detalleUsuario = new { filtro } });
+                return new ResponseModel<IReadOnlyList<PuestoCmbViewModel>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorCodigo = 200,
+                        errorMensaje = ex.Message
+                    }
+                };
+            }
+            finally
+            {
+                this.db.Close();
+                this.db.Dispose();
+                MySqlConnection.ClearPool((MySqlConnection)db);
+                this.Dispose();
+            }
+        }
+
+        public async Task<ResponseModel<IReadOnlyList<PuestoViewModel>>> GetAllAsync()
+        {
+            try
+            {
+                db.Open();
+                var result = await db.QueryAsync<string>("spPuestosListado"
+                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
+
+                string resultadoCompleto = string.Concat(result);
+                if (resultadoCompleto != string.Empty)
                 {
                     return new ResponseModel<IReadOnlyList<PuestoViewModel>>()
                     {
@@ -267,77 +336,8 @@ namespace core.repositories
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "dsCmbPuestosAsync(string filtro)", detalleUsuario = new { filtro } });
-                return new ResponseModel<IReadOnlyList<PuestoViewModel>>()
-                {
-                    resultado = false,
-                    error = new ErrorModel()
-                    {
-                        error = ex,
-                        errorMensaje = ex.Message,
-                        errorCodigo = (int)ex.ErrorCode,
-                    },
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "dsCmbPuestosAsync(string filtro)", detalleUsuario = new { filtro } });
-                return new ResponseModel<IReadOnlyList<PuestoViewModel>>()
-                {
-                    resultado = false,
-                    error = new ErrorModel()
-                    {
-                        error = ex,
-                        errorCodigo = 200,
-                        errorMensaje = ex.Message
-                    }
-                };
-            }
-            finally
-            {
-                this.db.Close();
-                this.db.Dispose();
-                MySqlConnection.ClearPool((MySqlConnection)db);
-                this.Dispose();
-            }
-        }
-
-        public async Task<ResponseModel<IReadOnlyList<Puesto>>> GetAllAsync()
-        {
-            try
-            {
-                db.Open();
-                var result = await db.QueryAsync<string>("spPuestosListado"
-                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
-
-                string resultadoCompleto = string.Concat(result);
-                if (resultadoCompleto != string.Empty)
-                {
-                    return new ResponseModel<IReadOnlyList<Puesto>>()
-                    {
-                        resultado = true,
-                        data = JsonSerializer.Deserialize<IReadOnlyList<Puesto>>(resultadoCompleto)
-                    };
-                }
-                else
-                {
-                    return new ResponseModel<IReadOnlyList<Puesto>>()
-                    {
-                        resultado = false,
-                        data = new List<Puesto>(),
-                        error = new ErrorModel()
-                        {
-                            error = null,
-                            errorCodigo = 100,
-                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
-                        }
-                    };
-                }
-            }
-            catch (MySqlException ex)
-            {
                 _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
-                return new ResponseModel<IReadOnlyList<Puesto>>()
+                return new ResponseModel<IReadOnlyList<PuestoViewModel>>()
                 {
                     resultado = false,
                     error = new ErrorModel()
@@ -351,7 +351,7 @@ namespace core.repositories
             catch (Exception ex)
             {
                 _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
-                return new ResponseModel<IReadOnlyList<Puesto>>()
+                return new ResponseModel<IReadOnlyList<PuestoViewModel>>()
                 {
                     resultado = false,
                     error = new ErrorModel()
@@ -371,7 +371,7 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<Option<Puesto>>> GetByIdAsync(int id)
+        public async Task<ResponseModel<Option<PuestoViewModel>>> GetByIdAsync(int id)
         {
             try
             {
@@ -383,18 +383,18 @@ namespace core.repositories
                 string resultadoCompleto = string.Concat(result);
                 if (resultadoCompleto != String.Empty)
                 {
-                    return new ResponseModel<Option<Puesto>>()
+                    return new ResponseModel<Option<PuestoViewModel>>()
                     {
                         resultado = true,
-                        data = JsonSerializer.Deserialize<Puesto>(resultadoCompleto)
+                        data = JsonSerializer.Deserialize<PuestoViewModel>(resultadoCompleto)
                     };
                 }
                 else
                 {
-                    return new ResponseModel<Option<Puesto>>()
+                    return new ResponseModel<Option<PuestoViewModel>>()
                     {
                         resultado = false,
-                        data = new Puesto(),
+                        data = new PuestoViewModel(),
                         error = new ErrorModel()
                         {
                             error = null,
@@ -407,7 +407,7 @@ namespace core.repositories
             catch (MySqlException ex)
             {
                 _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _puestoId = id } });
-                return new ResponseModel<Option<Puesto>>()
+                return new ResponseModel<Option<PuestoViewModel>>()
                 {
                     resultado = false,
                     error = new ErrorModel()
@@ -421,7 +421,7 @@ namespace core.repositories
             catch (Exception ex)
             {
                 _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _puestoId = id } });
-                return new ResponseModel<Option<Puesto>>()
+                return new ResponseModel<Option<PuestoViewModel>>()
                 {
                     resultado = false,
                     error = new ErrorModel()
@@ -517,6 +517,76 @@ namespace core.repositories
             {
                 db.Close();
                 db.Dispose();
+                MySqlConnection.ClearPool((MySqlConnection)db);
+                this.Dispose();
+            }
+        }
+
+        private async Task<ResponseModel<Option<Puesto>>> GetPuestoByIdAsync(int id)
+        {
+            try
+            {
+                db.Open();
+                var result = await db.QueryAsync<string>("spPuestosListadoPorId"
+                    , new { _puestoId = id }
+                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
+
+                string resultadoCompleto = string.Concat(result);
+                if (resultadoCompleto != string.Empty)
+                {
+                    return new ResponseModel<Option<Puesto>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<Puesto>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<Option<Puesto>>()
+                    {
+                        resultado = false,
+                        data = new Puesto(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
+            }
+            catch (MySqlException ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetPuestoByIdAsync(int id)", detalleUsuario = new { _puestoId = id } });
+                return new ResponseModel<Option<Puesto>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorMensaje = ex.Message,
+                        errorCodigo = (int)ex.ErrorCode,
+                    },
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetPuestoByIdAsync(int id)", detalleUsuario = new { _puestoId = id } });
+                return new ResponseModel<Option<Puesto>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorCodigo = 000,
+                        errorMensaje = ex.Message
+                    }
+                };
+            }
+            finally
+            {
+                this.db.Close();
+                this.db.Dispose();
                 MySqlConnection.ClearPool((MySqlConnection)db);
                 this.Dispose();
             }

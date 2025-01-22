@@ -3,6 +3,7 @@
 using entities.entities;
 using entities.interfaces;
 using entities.models;
+using entities.models.UnidadMedida;
 using entities.models.Usuario;
 
 using LanguageExt;
@@ -151,20 +152,36 @@ namespace core.repositories
             {
                 db.Open();
                 var result = await db.QueryAsync<string>("spUsuarioPorId"
-                    , new { usuarioId = id }
+                    , new { _usuarioId = id }
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<Usuario>(resultadoCompleto);
-                return new ResponseModel<Option<Usuario>>()
+                if (resultadoCompleto != String.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<Option<Usuario>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<Usuario>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<Option<Usuario>>()
+                    {
+                        resultado = false,
+                        data = new Usuario(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
             }
             catch (MySqlException ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _usuarioId = id } });
                 return new ResponseModel<Option<Usuario>>()
                 {
                     resultado = false,
@@ -178,7 +195,7 @@ namespace core.repositories
             }
             catch (Exception ex)
             {
-                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { id } });
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int id)", detalleUsuario = new { _usuarioId = id } });
                 return new ResponseModel<Option<Usuario>>()
                 {
                     resultado = false,
@@ -240,6 +257,75 @@ namespace core.repositories
                     {
                         error = ex,
                         errorCodigo = 000,
+                        errorMensaje = ex.Message
+                    }
+                };
+            }
+            finally
+            {
+                this.db.Close();
+                this.db.Dispose();
+                MySqlConnection.ClearPool((MySqlConnection)db);
+                this.Dispose();
+            }
+        }
+
+        public async Task<ResponseModel<IReadOnlyList<Usuario>>> GetAllAsync()
+        {
+            try
+            {
+                db.Open();
+                var result = await db.QueryAsync<string>("spUsuariosListado"
+                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
+
+                string resultadoCompleto = string.Concat(result);
+                if (resultadoCompleto != String.Empty)
+                {
+                    return new ResponseModel<IReadOnlyList<Usuario>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<IReadOnlyList<Usuario>>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<IReadOnlyList<Usuario>>()
+                    {
+                        resultado = false,
+                        data = new List<Usuario>(),
+                        error = new ErrorModel()
+                        {
+                            error = null,
+                            errorCodigo = 100,
+                            errorMensaje = "Error al intentar interpretar la respuesta del servidor"
+                        }
+                    };
+                }
+            }
+            catch (MySqlException ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
+                return new ResponseModel<IReadOnlyList<Usuario>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorMensaje = ex.Message,
+                        errorCodigo = (int)ex.ErrorCode,
+                    },
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
+                return new ResponseModel<IReadOnlyList<Usuario>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorCodigo = 200,
                         errorMensaje = ex.Message
                     }
                 };

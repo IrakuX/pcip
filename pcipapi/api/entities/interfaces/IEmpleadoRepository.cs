@@ -7,7 +7,7 @@ namespace entities.interfaces
     public interface IEmpleadoRepository : IGenericAddRepository<Empleado>,
         IGenericUpdateRepository<Empleado>,
         IGenericDeleteRepository<Empleado>,
-        IGenericListRepository<Empleado>,
+        IGenericListRepository<EmpleadoViewModel>,
         IDisposable
     {
         Task<ResponseModel<IReadOnlyList<EmpleadoCmbViewModel>>> dsCmbEmpleadosAsync(string filtro);

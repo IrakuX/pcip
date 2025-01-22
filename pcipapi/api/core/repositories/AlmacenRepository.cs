@@ -6,6 +6,8 @@ using entities.models;
 using entities.models.Almacen;
 
 using LanguageExt;
+using LanguageExt.ClassInstances;
+using LanguageExt.Common;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -364,11 +366,10 @@ namespace core.repositories
                 string resultadoCompleto = string.Concat(result);
                 if (resultadoCompleto != string.Empty)
                 {
-                    var resultado = JsonSerializer.Deserialize<IReadOnlyList<Almacen>>(resultadoCompleto);
                     return new ResponseModel<IReadOnlyList<Almacen>>()
                     {
                         resultado = true,
-                        data = resultado
+                        data = JsonSerializer.Deserialize<IReadOnlyList<Almacen>>(resultadoCompleto)
                     };
                 }
                 else
@@ -427,12 +428,22 @@ namespace core.repositories
                     , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
 
                 string resultadoCompleto = string.Concat(result);
-                var resultado = JsonSerializer.Deserialize<Almacen>(resultadoCompleto);
-                return new ResponseModel<Option<Almacen>>()
+                if (resultadoCompleto != string.Empty)
                 {
-                    resultado = true,
-                    data = resultado
-                };
+                    return new ResponseModel<Option<Almacen>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<Almacen>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<Option<Almacen>>()
+                    {
+                        resultado = true,
+                        data = Option<Almacen>.None
+                    };
+                }
             }
             catch (MySqlException ex)
             {

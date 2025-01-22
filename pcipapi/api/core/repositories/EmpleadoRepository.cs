@@ -172,7 +172,7 @@ namespace core.repositories
 
             try
             {
-                var registro = await GetByIdAsync(id);
+                var registro = await GetEmpleadoByIdAsync(id);
                 if (registro.data == Option<Empleado>.None)
                 {
                     throw new ArgumentException("Registro de objeto invalido.");
@@ -284,7 +284,7 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<IReadOnlyList<Empleado>>> GetAllAsync()
+        public async Task<ResponseModel<IReadOnlyList<EmpleadoViewModel>>> GetAllAsync()
         {
             try
             {
@@ -295,18 +295,18 @@ namespace core.repositories
                 string resultadoCompleto = string.Concat(result);
                 if (resultadoCompleto != String.Empty)
                 {
-                    return new ResponseModel<IReadOnlyList<Empleado>>()
+                    return new ResponseModel<IReadOnlyList<EmpleadoViewModel>>()
                     {
                         resultado = true,
-                        data = JsonSerializer.Deserialize<IReadOnlyList<Empleado>>(resultadoCompleto)
+                        data = JsonSerializer.Deserialize<IReadOnlyList<EmpleadoViewModel>>(resultadoCompleto)
                     };
                 }
                 else
                 {
-                    return new ResponseModel<IReadOnlyList<Empleado>>()
+                    return new ResponseModel<IReadOnlyList<EmpleadoViewModel>>()
                     {
                         resultado = false,
-                        data = new List<Empleado>(),
+                        data = new List<EmpleadoViewModel>(),
                         error = new ErrorModel()
                         {
                             error = null,
@@ -319,7 +319,7 @@ namespace core.repositories
             catch (MySqlException ex)
             {
                 _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetAllAsync()" });
-                return new ResponseModel<IReadOnlyList<Empleado>>()
+                return new ResponseModel<IReadOnlyList<EmpleadoViewModel>>()
                 {
                     resultado = false,
                     error = new ErrorModel()
@@ -333,7 +333,7 @@ namespace core.repositories
             catch (Exception ex)
             {
                 _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetAllAsync()" });
-                return new ResponseModel<IReadOnlyList<Empleado>>()
+                return new ResponseModel<IReadOnlyList<EmpleadoViewModel>>()
                 {
                     resultado = false,
                     error = new ErrorModel()
@@ -353,7 +353,7 @@ namespace core.repositories
             }
         }
 
-        public async Task<ResponseModel<Option<Empleado>>> GetByIdAsync(int id)
+        public async Task<ResponseModel<Option<EmpleadoViewModel>>> GetByIdAsync(int id)
         {
             try
             {
@@ -365,18 +365,18 @@ namespace core.repositories
                 string resultadoCompleto = string.Concat(result);
                 if (resultadoCompleto != String.Empty)
                 {
-                    return new ResponseModel<Option<Empleado>>()
+                    return new ResponseModel<Option<EmpleadoViewModel>>()
                     {
                         resultado = true,
-                        data = JsonSerializer.Deserialize<Empleado>(resultadoCompleto)
+                        data = JsonSerializer.Deserialize<EmpleadoViewModel>(resultadoCompleto)
                     };
                 }
                 else
                 {
-                    return new ResponseModel<Option<Empleado>>()
+                    return new ResponseModel<Option<EmpleadoViewModel>>()
                     {
                         resultado = false,
-                        data = new Empleado(),
+                        data = new EmpleadoViewModel(),
                         error = new ErrorModel()
                         {
                             error = null,
@@ -389,7 +389,7 @@ namespace core.repositories
             catch (MySqlException ex)
             {
                 _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetByIdAsync(int empleadoId)", detalleUsuario = new { _empleadoId = id } });
-                return new ResponseModel<Option<Empleado>>()
+                return new ResponseModel<Option<EmpleadoViewModel>>()
                 {
                     resultado = false,
                     error = new ErrorModel()
@@ -403,7 +403,7 @@ namespace core.repositories
             catch (Exception ex)
             {
                 _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetByIdAsync(int empleadoId)", detalleUsuario = new { _empleadoId = id } });
-                return new ResponseModel<Option<Empleado>>()
+                return new ResponseModel<Option<EmpleadoViewModel>>()
                 {
                     resultado = false,
                     error = new ErrorModel()
@@ -499,6 +499,70 @@ namespace core.repositories
             {
                 db.Close();
                 db.Dispose();
+                MySqlConnection.ClearPool((MySqlConnection)db);
+                this.Dispose();
+            }
+        }
+
+        private async Task<ResponseModel<Option<Empleado>>> GetEmpleadoByIdAsync(int id)
+        {
+            try
+            {
+                db.Open();
+                var result = await db.QueryAsync<string>("spEmpleadosListadoPorId"
+                    , new { _empleadoId = id }
+                    , commandType: CommandType.StoredProcedure).ConfigureAwait(false);
+
+                string resultadoCompleto = string.Concat(result);
+                if (resultadoCompleto != string.Empty)
+                {
+                    return new ResponseModel<Option<Empleado>>()
+                    {
+                        resultado = true,
+                        data = JsonSerializer.Deserialize<Empleado>(resultadoCompleto)
+                    };
+                }
+                else
+                {
+                    return new ResponseModel<Option<Empleado>>()
+                    {
+                        resultado = true,
+                        data = new Empleado()
+                    };
+                }
+            }
+            catch (MySqlException ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error sql", error = ex, detalleMetodo = "GetEmpleadoByIdAsync(int id)", detalleUsuario = new { _empleadoId = id } });
+                return new ResponseModel<Option<Empleado>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorMensaje = ex.Message,
+                        errorCodigo = (int)ex.ErrorCode,
+                    },
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, ex.Message, new { errorTipo = "Error no sql", error = ex, detalleMetodo = "GetEmpleadoByIdAsync(int id)", detalleUsuario = new { _empleadoId = id } });
+                return new ResponseModel<Option<Empleado>>()
+                {
+                    resultado = false,
+                    error = new ErrorModel()
+                    {
+                        error = ex,
+                        errorCodigo = 000,
+                        errorMensaje = ex.Message
+                    }
+                };
+            }
+            finally
+            {
+                this.db.Close();
+                this.db.Dispose();
                 MySqlConnection.ClearPool((MySqlConnection)db);
                 this.Dispose();
             }

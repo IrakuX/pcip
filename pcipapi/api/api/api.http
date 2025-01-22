@@ -1,6 +1,19 @@
-@api_HostAddress = http://localhost:5255
-
-GET {{api_HostAddress}}/weatherforecast/
-Accept: application/json
+@api_HostAddress = https://localhost:44341/
+@disable-cache = true
 
 ###
+POST {{api_HostAddress}}api/auth/login
+Content-Type: application/json
+Accept: application/json
+{
+  "usuarioEmail": "sistemas@pcip.com",
+  "usuarioContrasena": "password123",
+  "usuarioRecuerdame": true
+}
+###
+@token = {{response.body.data.token}}
+
+###
+GET {{api_HostAddress}}api/Almacenes/GetAlmacenes
+Authorization: Bearer {{token}}
+Accept: application/json
