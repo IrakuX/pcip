@@ -4,7 +4,6 @@ using entities.entities;
 using entities.interfaces;
 using entities.models;
 using entities.models.Ciudad;
-using entities.models.Impuesto;
 
 using LanguageExt;
 

@@ -149,6 +149,7 @@ builder
     });
 
 builder.Services.AddEndpointsApiExplorer();
+//builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();

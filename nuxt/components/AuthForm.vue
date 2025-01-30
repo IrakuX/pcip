@@ -41,6 +41,13 @@
 
 <script setup lang="ts">
 import type { ValidationErrors } from '~/types/ValidationErrors';
+definePageMeta({
+    auth: {
+        unauthenticateOnly: true,
+        navigateAuthenticatedTo: '/index'
+    }
+})
+
 
 const form = ref({
     email: "",
